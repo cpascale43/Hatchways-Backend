@@ -9,7 +9,11 @@ app.get('/api/ping', (req, res) => {
 // middlewares
 app.use('/api', require('./api'))
 
-app.listen(port, () => {
-  console.log(`Server listening on port ${port}`)
-  console.log(`http://localhost:${port}/`)
-})
+if (!module.parent) {
+  app.listen(port, () => {
+    console.log(`Server listening on port ${port}`)
+    console.log(`http://localhost:${port}/`)
+  })
+}
+
+module.exports = app

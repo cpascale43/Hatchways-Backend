@@ -1,7 +1,6 @@
 const router = require("express").Router();
 const axios = require("axios");
 module.exports = router;
-let posts = require("../data");
 
 router.get("/", async (req, res, next) => {
   let { tags, sortBy, direction } = req.query;
@@ -26,25 +25,32 @@ router.get("/", async (req, res, next) => {
   // Send result based on the tags provided
   tags = tags.split(",");
   let response;
-
-  await Promise.all(
-    tags.map(async (tag) => {
-      response = await axios.get(
-        `https://hatchways.io/api/assessment/blog/posts?tag=${tag.trim(
-          " "
-        )}&sortBy=${sortBy}&direction=${direction}`
-      );
-    })
-  );
-
-  // sort the posts arraylist based on the sortby
-  posts.sort((a, b) => (a[sortBy] > b[sortBy] ? 1 : -1));
-  // return reverse posts array if direction is desecnding
-  if (direction === "desc") return res.json({ posts: posts.reverse() });
-
-  return res.json({ posts });
-
   try {
+    let posts = [].concat.apply(
+      [],
+      await Promise.all(
+        tags.map(async (tag) => {
+          response = await axios(
+            `https://hatchways.io/api/assessment/blog/posts?tag=${tag.trim(
+              " "
+            )}&sortBy=${sortBy}&direction=${direction}`
+          );
+          // Removes duplicate results
+          return response.data.posts.filter((post) => {
+            const duplicate = seen.has(post.id);
+            seen.add(post.id);
+            return !duplicate;
+          });
+        })
+      )
+    );
+
+    // sort the posts arraylist based on the sortby
+    posts.sort((a, b) => (a[sortBy] > b[sortBy] ? 1 : -1));
+    // return reverse posts array if direction is desecnding
+    if (direction === "desc") res.json({ posts: posts.reverse() });
+
+    res.json({ posts });
   } catch (error) {
     res.json({ posts: [] });
   }
